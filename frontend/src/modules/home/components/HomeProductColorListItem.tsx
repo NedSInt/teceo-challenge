@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import {
   Box,
@@ -15,7 +16,7 @@ interface HomeProductColorListItemProps {
   item: CardItem;
 }
 
-const HomeProductColorListItem = ({ item }: HomeProductColorListItemProps) => {
+const HomeProductColorListItem = memo(({ item }: HomeProductColorListItemProps) => {
   const { format } = useMoney();
 
   return (
@@ -43,6 +44,8 @@ const HomeProductColorListItem = ({ item }: HomeProductColorListItemProps) => {
       </Box>
     </Card>
   );
-};
+});
+
+HomeProductColorListItem.displayName = 'HomeProductColorListItem';
 
 export default HomeProductColorListItem;

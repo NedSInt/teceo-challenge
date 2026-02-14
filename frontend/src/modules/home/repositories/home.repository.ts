@@ -5,13 +5,14 @@ import type { ProductColorDTO } from '../interfaces/product-color.dto';
 const homeRepository = () => {
   const getProductColors = (page: number, search?: string) => {
     const limit = 10;
-    return api.get<PageDTO<ProductColorDTO>>('/product-colors', {
-      params: {
-        limit,
-        skip: page * limit,
-        productCodeOrName: search,
-      },
-    });
+    const params: Record<string, string | number> = {
+      limit,
+      skip: page * limit,
+    };
+    if (search != null && search.trim() !== '') {
+      params.productCodeOrName = search.trim();
+    }
+    return api.get<PageDTO<ProductColorDTO>>('/product-colors', { params });
   };
 
   return {

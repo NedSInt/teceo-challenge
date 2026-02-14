@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import { IsOptional, IsString } from 'class-validator';
 import { SelectQueryBuilder } from 'typeorm';
 import BaseFilter from '../../../../commons/filters/base.filter';
@@ -6,6 +7,11 @@ import ProductColor from '../product-colors.model';
 export default class ListProductColorsFilter extends BaseFilter<ProductColor> {
   @IsOptional()
   @IsString()
+  @Transform(({ value }) =>
+    typeof value === 'string' && (value.includes('?') || value.includes('='))
+      ? undefined
+      : value,
+  )
   productCodeOrName?: string;
 
   createWhere(queryBuilder: SelectQueryBuilder<ProductColor>): void {

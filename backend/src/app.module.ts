@@ -1,6 +1,8 @@
+import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { createCacheOptions } from './cache/cache.config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import ColorsModule from './modules/colors/colors.module';
@@ -16,6 +18,11 @@ import SkusModule from './modules/skus/skus.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+    }),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      inject: [ConfigService],
+      useFactory: createCacheOptions,
     }),
     TypeOrmModule.forRootAsync({
       imports: [

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import Page from '../../../commons/dtos/page.dto';
 import OrderItemsService from '../order-items/order-items.service';
 import { ListOrdersDTO } from './dtos/list-orders.dto';
@@ -35,45 +35,48 @@ export default class OrdersService {
   }
 
   private async getOrdersWithTotals(orders: Order[]): Promise<ListOrdersDTO[]> {
-    const ordersWithTotals: ListOrdersDTO[] = [];
+    if (orders.length === 0) return [];
 
-    for (const order of orders) {
-      const orderItems = await this.orderItemsService
-        .createQueryBuilder('orderItem')
-        .leftJoinAndSelect('orderItem.sku', 'sku')
-        .leftJoinAndSelect('sku.productColor', 'productColor')
-        .where('orderItem.order.id = :orderId', { orderId: order.id })
-        .getMany();
+    const orderIds = orders.map((o) => o.id);
+    const orderItems = await this.orderItemsService
+      .createQueryBuilder('orderItem')
+      .leftJoinAndSelect('orderItem.sku', 'sku')
+      .leftJoinAndSelect('sku.productColor', 'productColor')
+      .leftJoinAndSelect('orderItem.order', 'order')
+      .where('order.id IN (:...orderIds)', { orderIds })
+      .getMany();
 
+    const itemsByOrderId = new Map<string, typeof orderItems>();
+    for (const item of orderItems) {
+      const orderId = item.order.id;
+      const list = itemsByOrderId.get(orderId) ?? [];
+      list.push(item);
+      itemsByOrderId.set(orderId, list);
+    }
+
+    return orders.map((order) => {
+      const items = itemsByOrderId.get(order.id) ?? [];
       let totalValue = 0;
-      orderItems.forEach((orderItem) => {
-        totalValue += orderItem.sku.price * orderItem.quantity;
-      });
-
       let totalQuantity = 0;
-      orderItems.forEach((orderItem) => {
-        totalQuantity += Number(orderItem.quantity);
-      });
+      const productColorIds = new Set<string>();
 
-      const orderProductColorIds: string[] = [];
-      orderItems.forEach((orderItem) => {
-        if (orderItem.sku) {
-          const productColorId = orderItem.sku.productColor.id;
-          if (!orderProductColorIds.includes(productColorId)) {
-            orderProductColorIds.push(productColorId);
-          }
+      for (const item of items) {
+        if (item.sku) {
+          totalValue += Number(item.sku.price) * Number(item.quantity);
+          productColorIds.add(item.sku.productColor.id);
         }
-      });
-      const totalProductColors = orderProductColorIds.length;
+        totalQuantity += Number(item.quantity);
+      }
 
-      const averageValuePerUnit = totalQuantity
-        ? parseFloat((totalValue / totalQuantity).toFixed(2))
-        : 0;
-      const averageValuePerProductColor = totalProductColors
-        ? parseFloat((totalValue / totalProductColors).toFixed(2))
-        : 0;
+      const totalProductColors = productColorIds.size;
+      const averageValuePerUnit =
+        totalQuantity ? parseFloat((totalValue / totalQuantity).toFixed(2)) : 0;
+      const averageValuePerProductColor =
+        totalProductColors
+          ? parseFloat((totalValue / totalProductColors).toFixed(2))
+          : 0;
 
-      ordersWithTotals.push({
+      return {
         id: order.id,
         status: order.status,
         customer: order.customer,
@@ -82,10 +85,8 @@ export default class OrdersService {
         totalProductColors,
         averageValuePerUnit,
         averageValuePerProductColor,
-      });
-    }
-
-    return ordersWithTotals;
+      };
+    });
   }
 
   async update(orderId: string, order: Partial<Order>) {
@@ -93,8 +94,7 @@ export default class OrdersService {
   }
 
   async batchUpdate(orderIds: string[], order: Partial<Order>): Promise<void> {
-    for (const orderId of orderIds) {
-      await this.update(orderId, order);
-    }
+    if (orderIds.length === 0) return;
+    await this.repository.update({ id: In(orderIds) }, order);
   }
 }

@@ -7,7 +7,14 @@ import HomePage from './modules/home/HomePage';
 import OrdersPage from './modules/orders/OrdersPage';
 import theme from './theme/theme';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000, // 1 minuto - evita refetch ao voltar na tela
+      gcTime: 5 * 60 * 1000, // 5 minutos - mantém cache em memória
+    },
+  },
+});
 
 function App() {
   return (

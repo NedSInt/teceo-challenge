@@ -1,3 +1,4 @@
+import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   CircularProgress,
   Grid,
@@ -12,11 +13,14 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
-import { useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import useInfiniteScroll from '../../../hooks/useInfiniteScroll';
 import useOrdersList from '../hooks/useOrdersList';
 import { OrderDTO } from '../interfaces/order.dto';
 import OrdersListItem from './OrdersListItem';
+
+const ROW_HEIGHT = 53;
+const TABLE_MAX_HEIGHT = 600;
 
 const OrdersList = () => {
   const {
@@ -31,15 +35,33 @@ const OrdersList = () => {
   } = useOrdersList();
 
   const orders = useMemo(
-    () => data?.pages.flat() || ([] as OrderDTO[]),
+    () => data?.pages.flatMap((p) => p.data) ?? ([] as OrderDTO[]),
     [data?.pages]
   );
+  const totalCount = data?.pages[data.pages.length - 1]?.count ?? 0;
 
+  const tableContainerRef = useRef<HTMLDivElement>(null);
   const loaderRef = useInfiniteScroll(
     fetchNextPage,
     !!hasNextPage,
     isFetchingNextPage
   );
+
+  const rowVirtualizer = useVirtualizer({
+    count: orders.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 5,
+  });
+
+  const handleTableScroll = useCallback(() => {
+    const el = tableContainerRef.current;
+    if (!el || !hasNextPage || isFetchingNextPage) return;
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    if (scrollTop + clientHeight >= scrollHeight - 50) {
+      fetchNextPage();
+    }
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   if (status === 'pending') {
     return (
@@ -57,10 +79,23 @@ const OrdersList = () => {
     return <p>error</p>;
   }
 
+  const virtualRows = rowVirtualizer.getVirtualItems();
+
   return (
     <>
-      <TableContainer component={Paper} variant="outlined">
-        <Table size="small" aria-label="orders list">
+      {totalCount > 0 && (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          {orders.length} de {totalCount} pedidos
+        </Typography>
+      )}
+      <TableContainer
+        ref={tableContainerRef}
+        component={Paper}
+        variant="outlined"
+        onScroll={handleTableScroll}
+        sx={{ maxHeight: TABLE_MAX_HEIGHT, overflow: 'auto' }}
+      >
+        <Table size="small" aria-label="orders list" stickyHeader>
           <TableHead>
             <TableRow>
               <TableCell padding="checkbox" />
@@ -90,18 +125,38 @@ const OrdersList = () => {
               </TableCell>
             </TableRow>
           </TableHead>
-          <TableBody>
-            {orders.map(order => (
-              <OrdersListItem
-                key={order.id}
-                item={OrderDTO.toListItem(order)}
-                onToggle={toggleOrderId}
-                isToggled={selectedOrderIds.includes(order.id)}
-                onChangeStatus={newStatus =>
-                  onChangeStatus(newStatus, order.id)
-                }
+          <TableBody sx={{ position: 'relative' }}>
+            <TableRow>
+              <TableCell
+                colSpan={9}
+                sx={{
+                  height: rowVirtualizer.getTotalSize(),
+                  padding: 0,
+                  border: 0,
+                  lineHeight: 0,
+                }}
               />
-            ))}
+            </TableRow>
+            {virtualRows.map((virtualRow) => {
+              const order = orders[virtualRow.index];
+              return (
+                <OrdersListItem
+                  key={order.id}
+                  item={OrderDTO.toListItem(order)}
+                  onToggle={toggleOrderId}
+                  isToggled={selectedOrderIds.includes(order.id)}
+                  onChangeStatus={onChangeStatus}
+                  orderId={order.id}
+                  rowSx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                />
+              );
+            })}
           </TableBody>
         </Table>
       </TableContainer>

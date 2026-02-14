@@ -1,4 +1,10 @@
-import { CircularProgress, Grid, Skeleton, Stack } from '@mui/material';
+import {
+  CircularProgress,
+  Grid,
+  Skeleton,
+  Stack,
+  Typography,
+} from '@mui/material';
 import useInfiniteScroll from '../../../hooks/useInfiniteScroll';
 import { ProductColorDTO } from '../interfaces/product-color.dto';
 import HomeProductColorListItem from './HomeProductColorListItem';
@@ -26,7 +32,8 @@ const HomeProductColorList = () => {
     return <p>error</p>;
   }
 
-  const productColors = data.pages.flat();
+  const productColors = data.pages.flatMap((p) => p.data);
+  const totalCount = data.pages[data.pages.length - 1]?.count ?? 0;
 
   return (
     <>
@@ -39,6 +46,12 @@ const HomeProductColorList = () => {
       </Grid>
 
       <div ref={loaderRef} style={{ height: 10 }} />
+
+      {totalCount > 0 && (
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+          {productColors.length} de {totalCount} produtos
+        </Typography>
+      )}
 
       {isFetchingNextPage && (
         <Stack alignItems="center" padding={2}>

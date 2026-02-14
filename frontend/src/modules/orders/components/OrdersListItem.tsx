@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import {
   Checkbox,
   MenuItem,
@@ -17,16 +18,20 @@ import { coolToggledAnimation } from './orderListItem.styles';
 
 interface OrdersListItemProps {
   item: ListItem;
-  onChangeStatus: (newStatus: OrderStatus) => void;
-  isToggled: boolean;
+  onChangeStatus: (newStatus: OrderStatus, orderId: string) => void;
   onToggle: (orderId: string) => void;
+  isToggled: boolean;
+  orderId: string;
+  rowSx?: Record<string, unknown>;
 }
 
-const OrdersListItem = ({
+const OrdersListItem = memo(({
   item,
   onChangeStatus,
-  isToggled,
   onToggle,
+  isToggled,
+  orderId,
+  rowSx,
 }: OrdersListItemProps) => {
   const { format } = useMoney();
 
@@ -37,13 +42,14 @@ const OrdersListItem = ({
         backgroundColor: isToggled
           ? `${theme.palette.primary.main}15`
           : 'inherit',
+        ...rowSx,
       }}
     >
       <TableCell padding="checkbox">
         <Checkbox
           size="small"
           checked={isToggled}
-          onChange={() => onToggle(item.id)}
+          onChange={() => onToggle(orderId)}
         />
       </TableCell>
       <TableCell component="th" scope="row">
@@ -77,7 +83,7 @@ const OrdersListItem = ({
           variant="filled"
           size="small"
           value={item.status}
-          onChange={e => onChangeStatus(e.target.value)}
+          onChange={(e) => onChangeStatus(e.target.value, orderId)}
           MenuProps={{
             PaperProps: {
               sx: { ...(isToggled && coolToggledAnimation) },
@@ -106,6 +112,8 @@ const OrdersListItem = ({
       </TableCell>
     </TableRow>
   );
-};
+});
+
+OrdersListItem.displayName = 'OrdersListItem';
 
 export default OrdersListItem;

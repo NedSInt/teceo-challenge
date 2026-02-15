@@ -20,7 +20,10 @@ const useHomeProductColorList = () => {
     },
     getNextPageParam: (lastPage, pages) => {
       const totalLoaded = pages.reduce((sum, p) => sum + p.data.length, 0);
-      if (totalLoaded >= lastPage.count || !lastPage.data.length) {
+      if (
+        (lastPage.count != null && totalLoaded >= lastPage.count) ||
+        !lastPage.data.length
+      ) {
         return undefined;
       }
       return pages.length;

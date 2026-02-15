@@ -7,10 +7,12 @@ import Page from '../../../commons/dtos/page.dto';
 import { ListProductColorsDTO } from './dtos/list-product-colors.dto';
 import ListProductColorsFilter from './dtos/list-product-colors.filter';
 import ProductColor from './product-colors.model';
-
-const CACHE_KEY_PREFIX = 'product-colors';
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
-const COUNT_CACHE_TTL_MS = 30 * 60 * 1000; // 30 min para count (sem busca)
+import {
+  CACHE_KEY_PREFIX,
+  CACHE_TTL_MS,
+  COUNT_CACHE_TTL_MS,
+  DEFAULT_PRODUCT_COLORS_LIMIT,
+} from './product-colors.constants';
 
 @Injectable()
 export default class ProductColorsService {
@@ -39,7 +41,7 @@ export default class ProductColorsService {
 
   private buildCacheKey(filter: ListProductColorsFilter): string {
     const skip = filter.skip ?? 0;
-    const limit = filter.limit ?? 24;
+    const limit = filter.limit ?? DEFAULT_PRODUCT_COLORS_LIMIT;
     const search = filter.productCodeOrName ?? '';
     return `${CACHE_KEY_PREFIX}:${limit}:${skip}:${search}`;
   }
@@ -85,7 +87,7 @@ export default class ProductColorsService {
     filter: ListProductColorsFilter,
   ): Promise<Page<ListProductColorsDTO>> {
     const skip = filter.skip ?? 0;
-    const limit = filter.limit ?? 24;
+    const limit = filter.limit ?? DEFAULT_PRODUCT_COLORS_LIMIT;
 
     const [productColors, total] = await Promise.all([
       this.fetchDataOptimized(filter, skip, limit),

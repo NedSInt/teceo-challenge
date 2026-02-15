@@ -1,13 +1,13 @@
 import { api } from '../../../config/config';
 import type { PageDTO } from '../../../interfaces/page.interface';
 import type { ProductColorDTO } from '../interfaces/product-color.dto';
+import { PRODUCT_COLORS_PAGE_SIZE } from '../home.constants';
 
 const homeRepository = () => {
   const getProductColors = (page: number, search?: string) => {
-    const limit = 10;
     const params: Record<string, string | number> = {
-      limit,
-      skip: page * limit,
+      limit: PRODUCT_COLORS_PAGE_SIZE,
+      skip: page * PRODUCT_COLORS_PAGE_SIZE,
     };
     if (search != null && search.trim() !== '') {
       params.productCodeOrName = search.trim();

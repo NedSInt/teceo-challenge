@@ -1,0 +1,1 @@
+export const PRODUCT_COLORS_PAGE_SIZE = 12;

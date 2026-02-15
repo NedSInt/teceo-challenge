@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 
 const useInfiniteScroll = (
   onLoadMore: () => void,
   hasNextPage: boolean,
-  isFetchingNextPage: boolean
+  isFetchingNextPage: boolean,
+  scrollRootRef?: RefObject<HTMLElement | null>
 ) => {
   const loaderRef = useRef<HTMLDivElement | null>(null);
   const onLoadMoreRef = useRef(onLoadMore);
@@ -11,7 +12,10 @@ const useInfiniteScroll = (
 
   useEffect(() => {
     const loader = loaderRef.current;
+    const scrollRoot = scrollRootRef?.current ?? null;
     if (!loader) return;
+
+    if (scrollRootRef && !scrollRoot) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -20,12 +24,16 @@ const useInfiniteScroll = (
           onLoadMoreRef.current();
         }
       },
-      { rootMargin: '100px', threshold: 0 }
+      {
+        root: scrollRoot ?? undefined,
+        rootMargin: '100px',
+        threshold: 0,
+      }
     );
 
     observer.observe(loader);
     return () => observer.unobserve(loader);
-  }, [hasNextPage, isFetchingNextPage]);
+  }, [hasNextPage, isFetchingNextPage, scrollRootRef]);
 
   return loaderRef;
 };

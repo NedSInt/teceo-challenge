@@ -1,4 +1,4 @@
 export interface PageDTO<T> {
   data: T[];
-  count: number;
+  count?: number;
 }

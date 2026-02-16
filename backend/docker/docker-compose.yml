@@ -4,6 +4,15 @@ volumes:
   pg_data_teceo:
 
 services:
+  teceo-challenge-redis:
+    container_name: teceo-challenge-redis
+    hostname: teceo-challenge-redis
+    image: redis:7-alpine
+    ports:
+      - 6379:6379
+    networks:
+      - teceo-challenge
+
   teceo-challenge-postgres:
     container_name: teceo-challenge-postgres
     hostname: teceo-challenge-postgres

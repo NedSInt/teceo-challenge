@@ -15,7 +15,10 @@ export async function createCacheOptions(
     const url = password
       ? `redis://:${password}@${host}:${port}`
       : `redis://${host}:${port}`;
-    const keyv = createKeyv(url, { namespace: 'teceo-cache' });
+    const keyv = createKeyv(url, {
+      namespace: 'teceo-cache',
+      connectionTimeout: 2000,
+    });
     return { stores: [keyv], ttl: ttlSeconds * 1000 };
   } catch (err) {
     Logger.warn(

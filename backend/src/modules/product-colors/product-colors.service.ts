@@ -29,9 +29,12 @@ export default class ProductColorsService {
 
   async list(filter: ListProductColorsFilter): Promise<Page<ListProductColorsDTO>> {
     const cacheKey = this.buildCacheKey(filter);
-    const cached = await this.cache.get<Page<ListProductColorsDTO>>(cacheKey);
-    if (cached) {
-      return cached;
+    try {
+      const cached = await this.cache.get<Page<ListProductColorsDTO>>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    } catch {
     }
 
     const result = await this.fetchFromDatabase(filter);
@@ -53,14 +56,17 @@ export default class ProductColorsService {
 
   private async getCountCached(filter: ListProductColorsFilter): Promise<number> {
     const countKey = this.buildCountCacheKey(filter);
-    const cached = await this.cache.get<number>(countKey);
-    if (cached != null) {
-      return cached;
+    try {
+      const cached = await this.cache.get<number>(countKey);
+      if (cached != null) {
+        return cached;
+      }
+    } catch {
     }
 
     if (!filter.productCodeOrName) {
       const total = await this.getCountFromStats();
-      await this.cache.set(countKey, total, COUNT_CACHE_TTL_MS);
+      this.cache.set(countKey, total, COUNT_CACHE_TTL_MS).catch(() => {});
       return total;
     }
 
@@ -70,7 +76,7 @@ export default class ProductColorsService {
     );
     filter.createWhere(countQueryBuilder);
     const total = await countQueryBuilder.getCount();
-    await this.cache.set(countKey, total, CACHE_TTL_MS);
+    this.cache.set(countKey, total, CACHE_TTL_MS).catch(() => {});
     return total;
   }
 

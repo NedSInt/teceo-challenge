@@ -181,9 +181,6 @@ const OrdersList = () => {
           {isFetchingNextPage ? (
             <>
               <CircularProgress size={32} />
-              <Typography variant="body2" color="text.secondary">
-                Carregando mais pedidos...
-              </Typography>
             </>
           ) : (
             <div style={{ height: 1 }} aria-hidden />

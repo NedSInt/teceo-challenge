@@ -237,7 +237,7 @@ gcTime: 5 * 60 * 1000,  // 5 minutos — tempo que dados inativos permanecem em 
 ### 6.2 Load more — IntersectionObserver e loading no final
 
 - **Problema:** O div “loader” do infinite scroll ficava **fora** da tabela e sempre visível na viewport; o IntersectionObserver disparava em loop, gerando requisições desnecessárias.
-- **Solução:** Loader no final da lista, no fluxo da página. "Load more" só dispara quando o usuário rola até o fim. Durante `isFetchingNextPage`, exibe CircularProgress e "Carregando mais pedidos...".
+- **Solução:** Loader no final da lista, no fluxo da página. "Load more" só dispara quando o usuário rola até o fim. Durante `isFetchingNextPage`, exibe CircularProgress
 
 ### 6.3 React Query: menos requisições e UX mais fluida
 

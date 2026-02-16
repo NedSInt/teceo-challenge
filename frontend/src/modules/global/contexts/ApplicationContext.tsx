@@ -3,18 +3,26 @@ import { createContext, useContext, useState } from 'react';
 import { LoadingStatus } from '../enums/LoadingStatus.enum';
 import type { HandleLoadingStatusProps } from '../interfaces/applicationContext.interfaces';
 
-interface ApplicationContextProps {
+export interface ApplicationContextProps {
   search: string;
+  onChangeSearch: (newSearch: string) => void;
+  handleLoadingStatus: <T>(
+    props: HandleLoadingStatusProps<T>,
+  ) => Promise<T>;
+  loadingStatus: LoadingStatus;
 }
 
 const defaultFn = () => {};
 
-const ApplicationContext = createContext<ApplicationContextProps>({
+const defaultContextValue: ApplicationContextProps = {
   search: '',
   onChangeSearch: defaultFn,
-  handleLoadingStatus: defaultFn as never,
+  handleLoadingStatus: defaultFn as unknown as ApplicationContextProps['handleLoadingStatus'],
   loadingStatus: LoadingStatus.SUCCESS,
-});
+};
+
+const ApplicationContext =
+  createContext<ApplicationContextProps>(defaultContextValue);
 
 interface ApplicationContextProviderProps {
   children: React.ReactNode;
@@ -58,13 +66,6 @@ export const ApplicationContextProvider = ({
     </ApplicationContext.Provider>
   );
 };
-
-interface ApplicationContextProps {
-  search: string;
-  onChangeSearch: (newSearch: string) => void;
-  handleLoadingStatus: <T>(props: HandleLoadingStatusProps<T>) => Promise<T>;
-  loadingStatus: LoadingStatus;
-}
 
 export const useApplicationContext = () =>
   useContext<ApplicationContextProps>(ApplicationContext);

@@ -16,6 +16,7 @@ import useHomeProductColorList from './hooks/useHomeProductColorList';
 
 const COLS = 4;
 const ROW_HEIGHT_ESTIMATE = 320;
+const ROW_GAP = 76;
 const OVERSCAN = 6;
 
 const HomeProductColorList = () => {
@@ -47,7 +48,7 @@ const HomeProductColorList = () => {
 
   const rowVirtualizer = useWindowVirtualizer({
     count: rows.length,
-    estimateSize: () => ROW_HEIGHT_ESTIMATE,
+    estimateSize: () => ROW_HEIGHT_ESTIMATE + ROW_GAP,
     overscan: OVERSCAN,
     scrollMargin: 0,
     initialOffset: 0,
@@ -106,6 +107,8 @@ const HomeProductColorList = () => {
                 height: virtualRow.size,
                 transform: `translateY(${virtualRow.start}px)`,
                 willChange: 'transform',
+                paddingBottom: ROW_GAP,
+                boxSizing: 'border-box',
               }}
             >
               <Grid container spacing={2} sx={{ height: '100%' }}>

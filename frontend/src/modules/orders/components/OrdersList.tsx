@@ -1,17 +1,13 @@
 import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import {
   Alert,
+  Box,
   Button,
   CircularProgress,
   Grid,
   Paper,
   Skeleton,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   Typography,
 } from '@mui/material';
 import { useLayoutEffect, useMemo, useRef } from 'react';
@@ -22,6 +18,9 @@ import OrdersListItem from './OrdersListItem';
 
 const ROW_HEIGHT = 53;
 const OVERSCAN_ROW_COUNT = 30;
+
+const GRID_TEMPLATE_COLUMNS =
+  '48px minmax(120px, 1.5fr) minmax(140px, 1.8fr) 100px 80px 100px 120px 100px 140px';
 
 const OrdersList = () => {
   const {
@@ -102,48 +101,50 @@ const OrdersList = () => {
         </Typography>
       )}
       <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
-        <Table size="small" aria-label="orders list" stickyHeader>
-          <TableHead>
-            <TableRow>
-              <TableCell padding="checkbox" />
-              <TableCell variant="head">
-                <Typography>cliente</Typography>
-              </TableCell>
-              <TableCell variant="head">
-                <Typography>e-mail</Typography>
-              </TableCell>
-              <TableCell variant="head" align="right">
-                <Typography>quantidade de produto-cor</Typography>
-              </TableCell>
-              <TableCell variant="head" align="right">
-                <Typography>peças</Typography>
-              </TableCell>
-              <TableCell variant="head" align="right">
-                <Typography>total</Typography>
-              </TableCell>
-              <TableCell variant="head" align="right">
-                <Typography>valor médio por produto-cor</Typography>
-              </TableCell>
-              <TableCell variant="head" align="right">
-                <Typography>valor médio por peça</Typography>
-              </TableCell>
-              <TableCell variant="head">
-                <Typography>status</Typography>
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody sx={{ position: 'relative' }}>
-            <TableRow>
-              <TableCell
-                colSpan={9}
-                sx={{
-                  height: rowVirtualizer.getTotalSize(),
-                  padding: 0,
-                  border: 0,
-                  lineHeight: 0,
-                }}
-              />
-            </TableRow>
+        <Box
+          component="div"
+          role="table"
+          aria-label="orders list"
+          sx={{ width: '100%' }}
+        >
+          <Box
+            component="div"
+            role="row"
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: GRID_TEMPLATE_COLUMNS,
+              width: '100%',
+              position: 'sticky',
+              top: 0,
+              zIndex: 1,
+              backgroundColor: 'background.paper',
+              fontWeight: 600,
+              borderBottom: 1,
+              borderColor: 'divider',
+              '& > div': {
+                px: 1.5,
+                py: 1,
+                fontSize: '0.875rem',
+                display: 'flex',
+                alignItems: 'center',
+              },
+            }}
+          >
+            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-start' }} />
+            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-start' }}><Typography>cliente</Typography></Box>
+            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-start' }}><Typography>e-mail</Typography></Box>
+            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-end' }}><Typography>quantidade de produto-cor</Typography></Box>
+            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-end' }}><Typography>peças</Typography></Box>
+            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-end' }}><Typography>total</Typography></Box>
+            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-end' }}><Typography>valor médio por produto-cor</Typography></Box>
+            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-end' }}><Typography>valor médio por peça</Typography></Box>
+            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-start' }}><Typography>status</Typography></Box>
+          </Box>
+          <Box
+            component="div"
+            role="rowgroup"
+            sx={{ position: 'relative', display: 'block', minHeight: rowVirtualizer.getTotalSize() }}
+          >
             {virtualRows.map((virtualRow) => {
               const order = orders[virtualRow.index];
               if (!order) return null;
@@ -155,19 +156,22 @@ const OrdersList = () => {
                   isToggled={selectedOrderIds.includes(order.id)}
                   onChangeStatus={onChangeStatus}
                   orderId={order.id}
+                  gridTemplateColumns={GRID_TEMPLATE_COLUMNS}
                   rowSx={{
                     position: 'absolute',
                     top: 0,
                     left: 0,
                     right: 0,
+                    display: 'grid',
+                    gridTemplateColumns: GRID_TEMPLATE_COLUMNS,
                     transform: `translateY(${virtualRow.start}px)`,
                     willChange: 'transform',
                   }}
                 />
               );
             })}
-          </TableBody>
-        </Table>
+          </Box>
+        </Box>
       </Paper>
 
       {hasNextPage && (

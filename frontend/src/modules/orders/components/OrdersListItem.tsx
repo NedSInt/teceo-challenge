@@ -1,11 +1,10 @@
 import { memo } from 'react';
 import {
+  Box,
   Checkbox,
   MenuItem,
   Select,
   Stack,
-  TableCell,
-  TableRow,
   Typography,
 } from '@mui/material';
 import useMoney from '../../../hooks/useMoney';
@@ -16,12 +15,24 @@ import { orderStatusMapper } from '../utils/orderStatus.mapper';
 import OrderStatusDot from './OrderStatusDot';
 import { coolToggledAnimation } from './orderListItem.styles';
 
+const cellSx = {
+  px: 1.5,
+  py: 0.75,
+  borderBottom: 1,
+  borderColor: 'divider',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'flex-start',
+  fontSize: '0.875rem',
+};
+
 interface OrdersListItemProps {
   item: ListItem;
   onChangeStatus: (newStatus: OrderStatus, orderId: string) => void;
   onToggle: (orderId: string) => void;
   isToggled: boolean;
   orderId: string;
+  gridTemplateColumns: string;
   rowSx?: Record<string, unknown>;
 }
 
@@ -31,53 +42,56 @@ const OrdersListItem = memo(({
   onToggle,
   isToggled,
   orderId,
+  gridTemplateColumns,
   rowSx,
 }: OrdersListItemProps) => {
   const { format } = useMoney();
 
   return (
-    <TableRow
+    <Box
+      component="div"
+      role="row"
       sx={{
-        '&:last-child td, &:last-child th': { border: 0 },
         backgroundColor: isToggled
           ? `${theme.palette.primary.main}15`
           : 'inherit',
+        gridTemplateColumns,
         ...rowSx,
       }}
     >
-      <TableCell padding="checkbox">
+      <Box component="div" role="cell" sx={{ ...cellSx, justifyContent: 'flex-start' }}>
         <Checkbox
           size="small"
           checked={isToggled}
           onChange={() => onToggle(orderId)}
         />
-      </TableCell>
-      <TableCell component="th" scope="row">
+      </Box>
+      <Box component="div" role="cell" sx={cellSx}>
         <Typography variant="body2">{item.customerName}</Typography>
-      </TableCell>
-      <TableCell>
+      </Box>
+      <Box component="div" role="cell" sx={cellSx}>
         <Typography variant="body2">{item.customerEmail}</Typography>
-      </TableCell>
-      <TableCell align="right">
+      </Box>
+      <Box component="div" role="cell" sx={{ ...cellSx, justifyContent: 'flex-end' }}>
         <Typography variant="body2">{item.totalProductColors}</Typography>
-      </TableCell>
-      <TableCell align="right">
+      </Box>
+      <Box component="div" role="cell" sx={{ ...cellSx, justifyContent: 'flex-end' }}>
         <Typography variant="body2">{item.totalQuantity}</Typography>
-      </TableCell>
-      <TableCell align="right">
+      </Box>
+      <Box component="div" role="cell" sx={{ ...cellSx, justifyContent: 'flex-end' }}>
         <Typography variant="body2">{format(item.totalValue)}</Typography>
-      </TableCell>
-      <TableCell align="right">
+      </Box>
+      <Box component="div" role="cell" sx={{ ...cellSx, justifyContent: 'flex-end' }}>
         <Typography variant="body2">
           {format(item.averageValuePerProductColor)}
         </Typography>
-      </TableCell>
-      <TableCell align="right">
+      </Box>
+      <Box component="div" role="cell" sx={{ ...cellSx, justifyContent: 'flex-end' }}>
         <Typography variant="body2">
           {format(item.averageValuePerUnit)}
         </Typography>
-      </TableCell>
-      <TableCell>
+      </Box>
+      <Box component="div" role="cell" sx={cellSx}>
         <Select
           disableUnderline
           variant="filled"
@@ -92,7 +106,8 @@ const OrdersListItem = memo(({
           sx={{
             ...(isToggled && coolToggledAnimation),
             borderRadius: '4px',
-            minWidth: 140,
+            minWidth: 0,
+            width: '100%',
             '& .MuiSelect-select': {
               display: 'flex',
               alignItems: 'center',
@@ -109,8 +124,8 @@ const OrdersListItem = memo(({
             </MenuItem>
           ))}
         </Select>
-      </TableCell>
-    </TableRow>
+      </Box>
+    </Box>
   );
 });
 

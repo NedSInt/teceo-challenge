@@ -1,9 +1,14 @@
 import { Box, Container, Stack, Typography } from '@mui/material';
+import { useLayoutEffect } from 'react';
 import { TCO_BANNER } from '../../constants/images.constants';
 import theme from '../../theme/theme';
 import HomeProductColorList from './components/HomeProductColorList';
 
 const HomePage = () => {
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <Stack spacing={3} justifyContent="center" alignItems="center">
       <img

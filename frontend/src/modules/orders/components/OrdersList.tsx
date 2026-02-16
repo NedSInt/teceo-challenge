@@ -14,7 +14,7 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import useInfiniteScroll from '../../../hooks/useInfiniteScroll';
 import useOrdersList from '../hooks/useOrdersList';
 import { OrderDTO } from '../interfaces/order.dto';
@@ -37,19 +37,13 @@ const OrdersList = () => {
   } = useOrdersList();
 
   const parentRef = useRef<HTMLDivElement>(null);
-  const [scrollMargin, setScrollMargin] = useState(0);
+  const isInitialMount = useRef(true);
 
-  useEffect(() => {
-    const el = parentRef.current;
-    if (!el) return;
-    const measure = () => {
-      const rect = el.getBoundingClientRect();
-      setScrollMargin(rect.top + window.scrollY);
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
+  useLayoutEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      window.scrollTo(0, 0);
+    }
   }, []);
 
   const loaderRef = useInfiniteScroll(fetchNextPage, !!hasNextPage, isFetchingNextPage);
@@ -65,7 +59,8 @@ const OrdersList = () => {
     count: orders.length,
     estimateSize: () => ROW_HEIGHT,
     overscan: OVERSCAN_ROW_COUNT,
-    scrollMargin,
+    scrollMargin: 0,
+    initialOffset: 0,
     getItemKey: (index) => orders[index]?.id ?? index,
   });
 

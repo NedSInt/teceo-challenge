@@ -8,7 +8,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import useInfiniteScroll from '../../../hooks/useInfiniteScroll';
 import { ProductColorDTO } from '../interfaces/product-color.dto';
 import HomeProductColorListItem from './HomeProductColorListItem';
@@ -23,19 +23,13 @@ const HomeProductColorList = () => {
     useHomeProductColorList();
 
   const parentRef = useRef<HTMLDivElement>(null);
-  const [scrollMargin, setScrollMargin] = useState(0);
+  const isInitialMount = useRef(true);
 
-  useEffect(() => {
-    const el = parentRef.current;
-    if (!el) return;
-    const measure = () => {
-      const rect = el.getBoundingClientRect();
-      setScrollMargin(rect.top + window.scrollY);
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
+  useLayoutEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      window.scrollTo(0, 0);
+    }
   }, []);
 
   const loaderRef = useInfiniteScroll(fetchNextPage, !!hasNextPage, isFetchingNextPage);
@@ -55,7 +49,8 @@ const HomeProductColorList = () => {
     count: rows.length,
     estimateSize: () => ROW_HEIGHT_ESTIMATE,
     overscan: OVERSCAN,
-    scrollMargin,
+    scrollMargin: 0,
+    initialOffset: 0,
     getItemKey: (index) => rows[index]?.[0]?.id ?? index,
   });
 

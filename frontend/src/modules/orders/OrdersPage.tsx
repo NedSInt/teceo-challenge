@@ -1,7 +1,12 @@
 import { Container, Stack, Typography } from '@mui/material';
+import { useLayoutEffect } from 'react';
 import OrdersList from './components/OrdersList';
 
 const OrdersPage = () => {
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <Stack alignItems="center" marginTop={8} paddingTop={1} spacing={2}>
       <Container maxWidth="lg">

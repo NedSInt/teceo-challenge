@@ -8,6 +8,7 @@ export interface FetchProductColorsOpts {
   search: string | undefined;
   skip: number;
   limit: number;
+  cursor?: string;
 }
 
 @Injectable()
@@ -20,7 +21,12 @@ export default class ProductColorsRepository {
   async fetchDataOptimized(
     opts: FetchProductColorsOpts,
   ): Promise<ProductColor[]> {
-    const { search, skip, limit } = opts;
+    const { search, skip, limit, cursor } = opts;
+
+    if (cursor) {
+      return this.fetchWithCursor({ search, limit, cursor });
+    }
+
     const productsNeeded = Math.min(
       5000,
       Math.max(100, Math.ceil((skip + limit) * 2)),
@@ -57,6 +63,47 @@ export default class ProductColorsRepository {
       .andWhere('productColor.id IN (:...ids)', { ids })
       .orderBy('product.name', 'ASC')
       .addOrderBy('productColor.id', 'ASC')
+      .getMany();
+
+    const orderMap = new Map(ids.map((id: string, i: number) => [id, i]));
+    fullEntities.sort(
+      (a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0),
+    );
+    return fullEntities;
+  }
+
+  private async fetchWithCursor(opts: {
+    search: string | undefined;
+    limit: number;
+    cursor: string;
+  }): Promise<ProductColor[]> {
+    const { search, limit, cursor } = opts;
+    const params: (string | number)[] = search ? [`%${search}%`] : [];
+    params.push(cursor, limit);
+    const cursorParam = params.length - 1;
+    const limitParam = params.length;
+    const whereClause = search
+      ? `AND (p.code ILIKE $1 OR p.name ILIKE $1)`
+      : '';
+
+    const baseQuery = `
+      SELECT pc.id, pc.product_id, pc.color_id, pc.created_at, pc.updated_at
+      FROM product_colors pc
+      INNER JOIN products p ON p.id = pc.product_id
+      WHERE pc.id > $${cursorParam} ${whereClause}
+      ORDER BY pc.id ASC
+      LIMIT $${limitParam}
+    `;
+
+    const rows = await this.repository.manager.query(baseQuery, params);
+    if (rows.length === 0) return [];
+
+    const ids: string[] = rows.map((r: { id: string }) => r.id);
+    const fullEntities = await this.createQueryBuilder()
+      .leftJoinAndSelect('productColor.product', 'product')
+      .leftJoinAndSelect('productColor.color', 'color')
+      .andWhere('productColor.id IN (:...ids)', { ids })
+      .orderBy('productColor.id', 'ASC')
       .getMany();
 
     const orderMap = new Map(ids.map((id: string, i: number) => [id, i]));

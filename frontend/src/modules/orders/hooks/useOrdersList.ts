@@ -3,7 +3,7 @@ import {
   useInfiniteQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useApplicationContext } from '../../global/contexts/ApplicationContext';
 import type { PageDTO } from '../../../interfaces/page.interface';
 import type { OrderStatus } from '../enums/orderStatus.enum';
@@ -16,7 +16,7 @@ const ORDERS_STALE_TIME_MS = 5 * 60 * 1000; // 5 minutos — menos refetches aut
 const useOrdersList = () => {
   const queryClient = useQueryClient();
   const { search } = useApplicationContext();
-  const queryKey = ['orders', search];
+  const queryKey = useMemo(() => ['orders', search] as const, [search]);
 
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const selectedOrderIdsRef = useRef<string[]>([]);

@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import {
   Box,
@@ -10,14 +10,24 @@ import {
 } from '@mui/material';
 import useMoney from '../../../hooks/useMoney';
 import theme from '../../../theme/theme';
-import type { CardItem } from '../interfaces/home-product-color-list-item.interface';
+import { ProductColorDTO } from '../interfaces/product-color.dto';
 
 interface HomeProductColorListItemProps {
-  item: CardItem;
+  productColor: ProductColorDTO;
 }
 
-const HomeProductColorListItem = memo(({ item }: HomeProductColorListItemProps) => {
+const HomeProductColorListItem = memo(({ productColor }: HomeProductColorListItemProps) => {
   const { format } = useMoney();
+  const item = useMemo(
+    () => ProductColorDTO.toCardItem(productColor),
+    [
+      productColor.id,
+      productColor.price,
+      productColor.product?.imageUrl,
+      productColor.product?.name,
+      productColor.color?.name,
+    ],
+  );
 
   return (
     <Card variant="outlined" sx={{ borderRadius: '8px' }}>

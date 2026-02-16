@@ -10,7 +10,6 @@ import {
 } from '@mui/material';
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import useInfiniteScroll from '../../../hooks/useInfiniteScroll';
-import { ProductColorDTO } from '../interfaces/product-color.dto';
 import HomeProductColorListItem from './HomeProductColorListItem';
 import useHomeProductColorList from './hooks/useHomeProductColorList';
 
@@ -39,12 +38,13 @@ const HomeProductColorList = () => {
   const totalCount = data?.pages?.[data.pages.length - 1]?.count ?? 0;
 
   const rows = useMemo(() => {
-    const list: (typeof productColors)[] = [];
-    for (let i = 0; i < productColors.length; i += COLS) {
-      list.push(productColors.slice(i, i + COLS));
+    const flat = data?.pages?.flatMap((p) => p.data) ?? [];
+    const list: (typeof flat)[] = [];
+    for (let i = 0; i < flat.length; i += COLS) {
+      list.push(flat.slice(i, i + COLS));
     }
     return list;
-  }, [productColors]);
+  }, [data?.pages]);
 
   const rowVirtualizer = useWindowVirtualizer({
     count: rows.length,
@@ -114,9 +114,7 @@ const HomeProductColorList = () => {
               <Grid container spacing={2} sx={{ height: '100%' }}>
                 {rowItems.map((productColor) => (
                   <Grid size={{ xs: 6, sm: 4, md: 3 }} key={productColor.id}>
-                    <HomeProductColorListItem
-                      item={ProductColorDTO.toCardItem(productColor)}
-                    />
+                    <HomeProductColorListItem productColor={productColor} />
                   </Grid>
                 ))}
               </Grid>

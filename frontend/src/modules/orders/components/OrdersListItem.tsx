@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import {
   Box,
   Checkbox,
@@ -10,7 +10,7 @@ import {
 import useMoney from '../../../hooks/useMoney';
 import theme from '../../../theme/theme';
 import type { OrderStatus } from '../enums/orderStatus.enum';
-import type { ListItem } from '../interfaces/orders-list-item.interface';
+import { OrderDTO } from '../interfaces/order.dto';
 import { orderStatusMapper } from '../utils/orderStatus.mapper';
 import OrderStatusDot from './OrderStatusDot';
 import { coolToggledAnimation } from './orderListItem.styles';
@@ -24,28 +24,44 @@ const cellSx = {
   alignItems: 'center',
   justifyContent: 'flex-start',
   fontSize: '0.875rem',
+  fontWeight: 400,
+  WebkitFontSmoothing: 'subpixel-antialiased',
 };
 
 interface OrdersListItemProps {
-  item: ListItem;
+  order: OrderDTO;
   onChangeStatus: (newStatus: OrderStatus, orderId: string) => void;
   onToggle: (orderId: string) => void;
   isToggled: boolean;
-  orderId: string;
   gridTemplateColumns: string;
   rowSx?: Record<string, unknown>;
 }
 
 const OrdersListItem = memo(({
-  item,
+  order,
   onChangeStatus,
   onToggle,
   isToggled,
-  orderId,
   gridTemplateColumns,
   rowSx,
 }: OrdersListItemProps) => {
   const { format } = useMoney();
+  const item = useMemo(
+    () => OrderDTO.toListItem(order),
+    [
+      order.id,
+      order.status,
+      order.code,
+      order.customer?.name,
+      order.customer?.email,
+      order.totalProductColors,
+      order.totalQuantity,
+      order.totalValue,
+      order.averageValuePerUnit,
+      order.averageValuePerProductColor,
+    ],
+  );
+  const orderId = order.id;
 
   return (
     <Box
@@ -56,6 +72,7 @@ const OrdersListItem = memo(({
           ? `${theme.palette.primary.main}15`
           : 'inherit',
         gridTemplateColumns,
+        WebkitFontSmoothing: 'subpixel-antialiased',
         ...rowSx,
       }}
     >

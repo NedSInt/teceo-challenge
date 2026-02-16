@@ -22,6 +22,16 @@ const OVERSCAN_ROW_COUNT = 30;
 const GRID_TEMPLATE_COLUMNS =
   '48px minmax(120px, 1.5fr) minmax(140px, 1.8fr) 100px 80px 100px 120px 100px 140px';
 
+const baseRowSx = {
+  position: 'absolute' as const,
+  top: 0,
+  left: 0,
+  right: 0,
+  display: 'grid',
+  gridTemplateColumns: GRID_TEMPLATE_COLUMNS,
+  willChange: 'transform' as const,
+};
+
 const OrdersList = () => {
   const {
     data,
@@ -37,6 +47,11 @@ const OrdersList = () => {
 
   const parentRef = useRef<HTMLDivElement>(null);
   const isInitialMount = useRef(true);
+
+  const selectedSet = useMemo(
+    () => new Set(selectedOrderIds),
+    [selectedOrderIds],
+  );
 
   useLayoutEffect(() => {
     if (isInitialMount.current) {
@@ -144,21 +159,14 @@ const OrdersList = () => {
               return (
                 <OrdersListItem
                   key={order.id}
-                  item={OrderDTO.toListItem(order)}
+                  order={order}
                   onToggle={toggleOrderId}
-                  isToggled={selectedOrderIds.includes(order.id)}
+                  isToggled={selectedSet.has(order.id)}
                   onChangeStatus={onChangeStatus}
-                  orderId={order.id}
                   gridTemplateColumns={GRID_TEMPLATE_COLUMNS}
                   rowSx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    display: 'grid',
-                    gridTemplateColumns: GRID_TEMPLATE_COLUMNS,
+                    ...baseRowSx,
                     transform: `translateY(${virtualRow.start}px)`,
-                    willChange: 'transform',
                   }}
                 />
               );

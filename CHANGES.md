@@ -1,6 +1,6 @@
 # CHANGES.md — Documentação das melhorias de performance
 
-Este documento descreve **todas as alterações** realizadas para otimizar o desempenho do catálogo de produtos e da listagem de pedidos. Cada mudança inclui o contexto, a estratégia utilizada e o impacto esperado.
+Este documento descreve **todas as alterações** realizadas para otimizar o desempenho do catálogo de produtos e da listagem de pedidos. Cada mudança inclui o contexto, a estratégia utilizada e o impacto esperado. As melhorias das seções **2.8**, **5.7–5.10**, **6.9–6.12** e as entradas correspondentes no sumário e na lista de arquivos foram aplicadas com base na análise detalhada em **docs/PERFORMANCE_ANALYSIS.md** (renderização, paginação, estado global, escala para milhões de registros).
 
 ---
 
@@ -14,8 +14,10 @@ Este documento descreve **todas as alterações** realizadas para otimizar o des
 | **Totais dos pedidos** | Carregar todos os itens + calcular em JS | 1 query agregada (SUM, COUNT DISTINCT, GROUP BY) | Menos dados e CPU na aplicação |
 | **Listagem de pedidos — query** | 3 round-trips (orders, count, totals) | 1 query CTE unificada + count só na 1ª página | Menos round-trips e latência |
 | **Listagem de pedidos — paginação** | OFFSET (lento em páginas avançadas) | Cursor (`WHERE id > :cursor`) nas páginas seguintes | Escala para milhões |
+| **Catálogo — paginação** | Apenas OFFSET/skip | Cursor (`WHERE pc.id > :cursor`) nas páginas seguintes | Escala para milhões |
 | **Atualização em massa** | N `UPDATE`s | 1 `UPDATE` com `IN` | Redução drástica de round-trips |
 | **Cache do catálogo** | — | Redis (5 min TTL) | Respostas em ~10 ms após warm-up |
+| **Frontend — re-renders** | queryKey/context/value instáveis, item/rowSx inline | queryKey/context memoizados, Set para seleção, item/rowSx estáveis, order/productColor + useMemo | memo efetivo; menos trabalho por interação |
 
 ---
 
@@ -109,6 +111,16 @@ Tempo: ~6,4 segundos.
 **Problema:** O `ProductColorsService` concentrava queries raw SQL (CTE, pg_class, preços mínimos) junto à orquestração e cache.
 
 **Solução:** Nova camada **ProductColorsRepository** que encapsula: `fetchDataOptimized` (CTE products-first), `getCountFromStats` (pg_class), `getCountWithFilter` (count com busca), `getMinPricesByProductColorIds`. O service mantém apenas cache e orquestração (`fetchFromDatabase`, `list`). Arquitetura alinhada com `OrdersRepository`.
+
+### 2.8 Paginação por cursor no catálogo (product-colors)
+
+**Problema:** A listagem do catálogo usava apenas `OFFSET`/`skip`. Em páginas avançadas (ex.: skip=1.000.000), o PostgreSQL percorre e descarta milhões de linhas, degradando a resposta.
+
+**Solução:**
+- **Filter:** Parâmetro opcional `cursor` (UUID) em `ListProductColorsFilter`; primeira página continua com `skip=0`.
+- **Repository:** Novo método interno `fetchWithCursor({ search, limit, cursor })` com `WHERE pc.id > :cursor ORDER BY pc.id ASC LIMIT :limit` (keyset pagination). Quando `cursor` é informado, usa-se esse caminho em vez de OFFSET.
+- **Service:** Repasse de `cursor` ao repository; chave de cache passa a incluir `cursor` para não colidir entre páginas.
+- **API:** `GET /product-colors?limit=12&cursor=<uuid>&productCodeOrName=...` nas páginas seguintes.
 
 ---
 
@@ -226,6 +238,26 @@ gcTime: 5 * 60 * 1000,  // 5 minutos — tempo que dados inativos permanecem em 
 - `productCodeOrName` é enviado **apenas** quando há termo de busca válido (não vazio).
 - Evita parâmetros vazios ou malformados e simplifica a chave de cache no backend.
 
+### 5.7 useMemo de `rows` com dependência em `data?.pages`
+
+- **Problema:** `rows` era calculado com dependência em `productColors` (resultado de `flatMap`), que tem nova referência a cada render, anulando o benefício do `useMemo`.
+- **Solução:** `rows` passou a depender de `data?.pages` (referência estável do React Query). O flat e o chunking são feitos dentro do `useMemo`; com isso, recálculo só ocorre quando as páginas de fato mudam.
+
+### 5.8 Item estável no card (productColor + useMemo)
+
+- **Problema:** O pai chamava `ProductColorDTO.toCardItem(productColor)` dentro do `map`, gerando novo objeto a cada render e tornando o `memo` de `HomeProductColorListItem` ineficaz.
+- **Solução:** O item passa a receber **`productColor`** (DTO); dentro do componente, `item` é derivado com `useMemo(() => ProductColorDTO.toCardItem(productColor), [productColor.id, ...])`. A referência de `item` fica estável quando o produto-cor não muda.
+
+### 5.9 React Query no catálogo e remoção de loading global
+
+- **Problema:** A `queryFn` do infinite query chamava `handleLoadingStatus()`, disparando `setLoadingStatus` global a cada request (inclusive em `fetchNextPage`), causando re-renders em cascata em toda a árvore.
+- **Solução:** A `queryFn` chama diretamente o repositório; o loading fica restrito ao estado do React Query (`isFetching`, `isFetchingNextPage`). Adicionados ainda **staleTime: 5 min**, **refetchOnWindowFocus: false** e **placeholderData: keepPreviousData** na query do catálogo, alinhando ao comportamento da lista de pedidos.
+
+### 5.10 Paginação por cursor no frontend (catálogo)
+
+- **Problema:** O frontend usava `getNextPageParam` retornando `pages.length` (offset implícito) e o repositório enviava `skip=page*size`; em escala, o backend sofreria com OFFSET grande.
+- **Solução:** **initialPageParam: undefined**; **getNextPageParam** retorna `lastPage.data[lastPage.data.length - 1]?.id` (cursor). O repositório aceita `cursorOrPage: string | number | undefined`: quando é string envia `cursor`, quando número ou undefined envia `skip` (primeira página com skip=0). Assim, a partir da segunda página as requisições usam cursor e o backend usa keyset pagination (ver 2.8).
+
 ---
 
 ## 6. Frontend — Listagem de pedidos
@@ -275,6 +307,26 @@ gcTime: 5 * 60 * 1000,  // 5 minutos — tempo que dados inativos permanecem em 
 - **orders.constants.ts:** `ORDERS_PAGE_SIZE = 50` centralizada; usada em `orders.repository.ts` e `useOrdersList.ts` (evita duplicação).
 - **UI de erro:** Substituído `<p>error</p>` por `Alert` do MUI com mensagem clara e botão "Tentar novamente" que chama `refetch()` para nova tentativa.
 
+### 6.9 queryKey estável (useOrdersList)
+
+- **Problema:** `queryKey = ['orders', search]` era recriado a cada render (novo array), fazendo com que `onChangeStatus` (que depende de `queryKey` no `useCallback`) fosse recriado e todos os `OrdersListItem` recebessem nova prop, anulando o `memo`.
+- **Solução:** `queryKey` passou a ser `useMemo(() => ['orders', search] as const, [search])`, mantendo referência estável entre renders e permitindo que `onChangeStatus` e o `memo` dos itens funcionem corretamente.
+
+### 6.10 Set para seleção e rowSx estável (OrdersList)
+
+- **Problema:** Para cada linha era feito `selectedOrderIds.includes(order.id)` (O(n)); além disso, `rowSx` era um objeto criado inline no `map`, nova referência a cada render.
+- **Solução:** Uso de **Set** para seleção: `selectedSet = useMemo(() => new Set(selectedOrderIds), [selectedOrderIds])` e `isToggled={selectedSet.has(order.id)}` (O(1)). **baseRowSx** extraído para constante; no map só se passa `{ ...baseRowSx, transform: ... }`, evitando novo objeto completo a cada item.
+
+### 6.11 OrdersListItem recebe order e deriva item com useMemo
+
+- **Problema:** O pai passava `item={OrderDTO.toListItem(order)}`, criando novo objeto a cada render e tornando o `memo` do item ineficaz.
+- **Solução:** O item passou a receber **`order`** (OrderDTO); internamente, `item` é derivado com `useMemo(() => OrderDTO.toListItem(order), [order.id, order.status, ...])`. Com isso, a referência de `item` fica estável quando o pedido não muda e o `memo` passa a evitar re-renders desnecessários.
+
+### 6.12 ApplicationContext — value e callbacks memoizados
+
+- **Problema:** O `value` do `ApplicationContext.Provider` era um objeto literal criado a cada render, e `handleLoadingStatus` era uma função nova a cada render. Qualquer re-render do provider fazia todos os consumidores (catálogo e pedidos) re-renderizarem.
+- **Solução:** **value** passou a ser criado com **useMemo** dependendo de `search`, `handleLoadingStatus` e `loadingStatus`. **handleLoadingStatus** foi envolvido em **useCallback**. Com referências estáveis, apenas consumidores cujos dados do contexto mudaram re-renderizam.
+
 ---
 
 ## 7. Variáveis de ambiente
@@ -293,10 +345,10 @@ Para o backend, além das variáveis de banco existentes, foram adicionadas:
 ## 8. Resumo de arquivos modificados/criados
 
 ### Backend
-- `src/modules/product-colors/product-colors.repository.ts` —  Encapsula fetchDataOptimized, getCountFromStats, getCountWithFilter, getMinPricesByProductColorIds
-- `src/modules/product-colors/product-colors.service.ts` — Orquestração e cache; delega persistência ao repository
-- `src/modules/product-colors/product-colors.constants.ts` —  `DEFAULT_PRODUCT_COLORS_LIMIT = 12`, `CACHE_KEY_PREFIX`, `CACHE_TTL_MS`, `COUNT_CACHE_TTL_MS`
-- `src/modules/product-colors/dtos/list-product-colors.filter.ts` — Sanitização de productCodeOrName; documentação createWhere/paginate
+- `src/modules/product-colors/product-colors.repository.ts` — Encapsula fetchDataOptimized, getCountFromStats, getCountWithFilter, getMinPricesByProductColorIds; **fetchWithCursor** para paginação por cursor (keyset)
+- `src/modules/product-colors/product-colors.service.ts` — Orquestração e cache; delega persistência ao repository; repasse de **cursor** e chave de cache com cursor
+- `src/modules/product-colors/product-colors.constants.ts` — `DEFAULT_PRODUCT_COLORS_LIMIT = 12`, `CACHE_KEY_PREFIX`, `CACHE_TTL_MS`, `COUNT_CACHE_TTL_MS`
+- `src/modules/product-colors/dtos/list-product-colors.filter.ts` — Sanitização de productCodeOrName; **cursor** (UUID opcional) para paginação
 - `src/modules/product-colors/product-colors.module.ts` — ProductColorsRepository nos providers
 - `commons/filters/base.filter.ts` — Documentação createWhere e paginate
 - `src/modules/orders/orders.service.ts` — Totais por pedido via query agregada, batchUpdate; orquestração com OrdersRepository; query unificada (CTE), paginação por cursor, count só na 1ª página, execução paralela
@@ -315,14 +367,15 @@ Para o backend, além das variáveis de banco existentes, foram adicionadas:
 - `src/App.tsx` — QueryClient com staleTime/gcTime
 - `src/modules/home/home.constants.ts` — `PRODUCT_COLORS_PAGE_SIZE = 12`
 - `src/modules/home/repositories/home.repository.ts` — Params condicionais; usa `PRODUCT_COLORS_PAGE_SIZE`
-- `src/modules/home/components/HomeProductColorList.tsx` — Virtualização com **useWindowVirtualizer** (scroll da página), grid por linhas (COLS=4, overscan 6), scrollMargin com ResizeObserver; UI de erro com Alert + botão "Tentar novamente"
-- `src/modules/home/components/HomeProductColorListItem.tsx` — memo
-- `src/modules/orders/components/OrdersList.tsx` — Virtualização com **useWindowVirtualizer** (scroll da página), sem TableContainer com scroll próprio; Paper + Table com stickyHeader; overscan 30, getItemKey; loader no final da lista com loading visível ("Carregando mais pedidos..."); totalCount usa `pages[0]?.count`; UI de erro com Alert + botão "Tentar novamente"
-- `src/modules/orders/components/OrdersListItem.tsx` — memo
-- `src/modules/orders/hooks/useOrdersList.ts` — React Query (staleTime, refetchOnWindowFocus, placeholderData), callbacks em useCallback, ref para selectedOrderIds; paginação por cursor (initialPageParam undefined, getNextPageParam retorna lastOrder.id); usa ORDERS_PAGE_SIZE
+- `src/modules/home/components/HomeProductColorList.tsx` — Virtualização com **useWindowVirtualizer** (scroll da página), grid por linhas (COLS=4, overscan 6); **useMemo de rows** com dependência em `data?.pages`; passa **productColor** ao item (não mais item inline)
+- `src/modules/home/components/HomeProductColorListItem.tsx` — memo; recebe **productColor**, deriva **item** com useMemo (toCardItem)
+- `src/modules/orders/components/OrdersList.tsx` — Virtualização com **useWindowVirtualizer** (scroll da página), sem TableContainer com scroll próprio; Paper + Table com stickyHeader; overscan 30, getItemKey; **baseRowSx** constante, **selectedSet** (Set) para isToggled O(1); passa **order** ao item (não mais item/orderId); loader no final da lista; totalCount usa `pages[0]?.count`; UI de erro com Alert + botão "Tentar novamente"
+- `src/modules/orders/components/OrdersListItem.tsx` — memo; recebe **order** (OrderDTO), deriva **item** com **useMemo** (OrderDTO.toListItem)
+- `src/modules/orders/hooks/useOrdersList.ts` — React Query (staleTime, refetchOnWindowFocus, placeholderData); **queryKey** estável com **useMemo**; callbacks em useCallback, ref para selectedOrderIds; paginação por cursor; usa ORDERS_PAGE_SIZE
 - `src/modules/orders/repositories/orders.repository.ts` — Aceita `cursor` (string) ou página (number); envia parâmetro adequado na URL; usa ORDERS_PAGE_SIZE
 - `src/modules/orders/orders.constants.ts` — `ORDERS_PAGE_SIZE = 50`
 - `src/interfaces/page.interface.ts` — `PageDTO.count` opcional
-- `src/modules/home/components/hooks/useHomeProductColorList.ts` — Tratamento de `lastPage.count` possivelmente undefined
-- `src/modules/global/contexts/ApplicationContext.tsx` — Interface `ApplicationContextProps` unificada (remoção de duplicata)
+- `src/modules/home/components/hooks/useHomeProductColorList.ts` — Tratamento de `lastPage.count` possivelmente undefined; **sem handleLoadingStatus** na queryFn; **staleTime**, **placeholderData**, **refetchOnWindowFocus: false**; **getNextPageParam** retorna último id (cursor)
+- `src/modules/home/repositories/home.repository.ts` — **getProductColors(cursorOrPage, search)** aceita cursor (string) ou página (number); envia `cursor` ou `skip` conforme o caso
+- `src/modules/global/contexts/ApplicationContext.tsx` — Interface `ApplicationContextProps` unificada; **value** do Provider com **useMemo**; **handleLoadingStatus** com **useCallback**
 - `src/hooks/useInfiniteScroll.ts` — Parâmetro opcional `scrollRootRef` para usar o container de scroll como root do IntersectionObserver

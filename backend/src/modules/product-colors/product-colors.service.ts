@@ -44,7 +44,8 @@ export default class ProductColorsService {
     const skip = filter.skip ?? 0;
     const limit = filter.limit ?? DEFAULT_PRODUCT_COLORS_LIMIT;
     const search = filter.productCodeOrName ?? '';
-    return `${CACHE_KEY_PREFIX}:${limit}:${skip}:${search}`;
+    const cursor = filter.cursor ?? '';
+    return `${CACHE_KEY_PREFIX}:${limit}:${skip}:${cursor}:${search}`;
   }
 
   private buildCountCacheKey(filter: ListProductColorsFilter): string {
@@ -80,12 +81,14 @@ export default class ProductColorsService {
   ): Promise<Page<ListProductColorsDTO>> {
     const skip = filter.skip ?? 0;
     const limit = filter.limit ?? DEFAULT_PRODUCT_COLORS_LIMIT;
+    const cursor = filter.cursor;
 
     const [productColors, total] = await Promise.all([
       this.productColorsRepository.fetchDataOptimized({
         search: filter.productCodeOrName,
         skip,
         limit,
+        cursor,
       }),
       this.getCountCached(filter),
     ]);

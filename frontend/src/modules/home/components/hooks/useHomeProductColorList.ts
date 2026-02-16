@@ -1,22 +1,17 @@
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
 import { useApplicationContext } from '../../../global/contexts/ApplicationContext';
-import type { PageDTO } from '../../../../interfaces/page.interface';
-import type { ProductColorDTO } from '../../interfaces/product-color.dto';
 import homeRepository from '../../repositories/home.repository';
 
+const PRODUCT_COLORS_STALE_TIME_MS = 5 * 60 * 1000; // 5 minutos
+
 const useHomeProductColorList = () => {
-  const { search, handleLoadingStatus } = useApplicationContext();
+  const { search } = useApplicationContext();
 
   const infiniteQuery = useInfiniteQuery({
     queryKey: ['product-colors', search],
     queryFn: async ({ pageParam }) => {
-      return handleLoadingStatus<PageDTO<ProductColorDTO>>({
-        disabled: !search?.length,
-        requestFn: async () => {
-          const response = await homeRepository().getProductColors(pageParam, search);
-          return response.data;
-        },
-      });
+      const response = await homeRepository().getProductColors(pageParam, search);
+      return response.data;
     },
     getNextPageParam: (lastPage, pages) => {
       const totalLoaded = pages.reduce((sum, p) => sum + p.data.length, 0);
@@ -26,9 +21,13 @@ const useHomeProductColorList = () => {
       ) {
         return undefined;
       }
-      return pages.length;
+      const lastItem = lastPage.data[lastPage.data.length - 1];
+      return lastItem?.id;
     },
-    initialPageParam: 0,
+    initialPageParam: undefined as string | undefined,
+    staleTime: PRODUCT_COLORS_STALE_TIME_MS,
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
   });
 
   return infiniteQuery;

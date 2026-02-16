@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { LoadingStatus } from '../enums/LoadingStatus.enum';
 import type { HandleLoadingStatusProps } from '../interfaces/applicationContext.interfaces';
 
@@ -34,7 +34,7 @@ export const ApplicationContextProvider = ({
   const [loadingStatus, setLoadingStatus] = useState(LoadingStatus.SUCCESS);
   const [search, setSearch] = useState('');
 
-  const handleLoadingStatus = async <T,>({
+  const handleLoadingStatus = useCallback(async <T,>({
     requestFn,
     onSuccess,
     disabled,
@@ -51,17 +51,20 @@ export const ApplicationContextProvider = ({
       onSuccess();
     }
     return response;
-  };
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      search,
+      onChangeSearch: setSearch,
+      handleLoadingStatus,
+      loadingStatus,
+    }),
+    [search, handleLoadingStatus, loadingStatus],
+  );
 
   return (
-    <ApplicationContext.Provider
-      value={{
-        search,
-        onChangeSearch: setSearch,
-        handleLoadingStatus,
-        loadingStatus,
-      }}
-    >
+    <ApplicationContext.Provider value={value}>
       {children}
     </ApplicationContext.Provider>
   );

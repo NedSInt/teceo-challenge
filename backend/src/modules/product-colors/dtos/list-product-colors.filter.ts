@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString, IsUUID } from 'class-validator';
 import { SelectQueryBuilder } from 'typeorm';
 import BaseFilter from '../../../../commons/filters/base.filter';
 import ProductColor from '../product-colors.model';
@@ -13,6 +13,10 @@ export default class ListProductColorsFilter extends BaseFilter<ProductColor> {
       : value,
   )
   productCodeOrName?: string;
+
+  @IsOptional()
+  @IsUUID()
+  cursor?: string;
 
   createWhere(queryBuilder: SelectQueryBuilder<ProductColor>): void {
     if (this.productCodeOrName) {

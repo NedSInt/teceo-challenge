@@ -51,8 +51,6 @@ const OrdersList = () => {
     () => data?.pages.flatMap((p) => p.data) ?? ([] as OrderDTO[]),
     [data?.pages]
   );
-  const totalCount =
-    data?.pages[0]?.count ?? data?.pages[data.pages.length - 1]?.count ?? 0;
 
   const rowVirtualizer = useWindowVirtualizer({
     count: orders.length,
@@ -95,11 +93,6 @@ const OrdersList = () => {
 
   return (
     <div ref={parentRef}>
-      {totalCount > 0 && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          {orders.length} de {totalCount} pedidos
-        </Typography>
-      )}
       <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
         <Box
           component="div"

@@ -124,14 +124,14 @@ const OrdersList = () => {
             }}
           >
             <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-start' }} />
-            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-start' }}><Typography>cliente</Typography></Box>
-            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-start' }}><Typography>e-mail</Typography></Box>
-            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-end' }}><Typography>quantidade de produto-cor</Typography></Box>
-            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-end' }}><Typography>peças</Typography></Box>
-            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-end' }}><Typography>total</Typography></Box>
-            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-end' }}><Typography>valor médio por produto-cor</Typography></Box>
-            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-end' }}><Typography>valor médio por peça</Typography></Box>
-            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-start' }}><Typography>status</Typography></Box>
+            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-start' }}><Typography color="text.secondary">cliente</Typography></Box>
+            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-start' }}><Typography color="text.secondary">e-mail</Typography></Box>
+            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-end' }}><Typography color="text.secondary">quantidade de produto-cor</Typography></Box>
+            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-end' }}><Typography color="text.secondary">peças</Typography></Box>
+            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-end' }}><Typography color="text.secondary">total</Typography></Box>
+            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-end' }}><Typography color="text.secondary">valor médio por produto-cor</Typography></Box>
+            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-end' }}><Typography color="text.secondary">valor médio por peça</Typography></Box>
+            <Box component="div" role="columnheader" sx={{ justifyContent: 'flex-start' }}><Typography color="text.secondary">status</Typography></Box>
           </Box>
           <Box
             component="div"
